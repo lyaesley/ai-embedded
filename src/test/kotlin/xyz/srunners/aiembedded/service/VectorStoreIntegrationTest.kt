@@ -4,6 +4,7 @@ import org.junit.jupiter.api.*
 import org.springframework.ai.document.Document
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.TestPropertySource
 import xyz.srunners.aiembedded.openai.service.VectorStoreService
 
@@ -200,5 +201,128 @@ class VectorStoreIntegrationTest {
         )
 
         println("✅ 유사도 임계값 테스트 성공")
+    }
+
+    @Test
+    @Order(8)
+    fun `08_파일_업로드_및_벡터_저장_테스트`() {
+        // 텍스트 파일 테스트
+        val textContent = """
+            Spring AI 파일 업로드 테스트
+            
+            이 문서는 파일 업로드 기능을 테스트하기 위한 문서입니다.
+            Spring AI의 Document Reader를 통해 파일 내용이 벡터 스토어에 저장됩니다.
+            
+            주요 기능:
+            - 파일 타입 자동 인식
+            - 문서 분할 및 청킹
+            - 메타데이터 자동 생성
+            - 벡터 임베딩 및 저장
+        """.trimIndent()
+        
+        val mockFile = MockMultipartFile(
+            "file",
+            "test-upload.txt",
+            "text/plain",
+            textContent.toByteArray()
+        )
+
+        // 파일 업로드 및 처리
+        val result = vectorStoreService.processAndStoreFile(mockFile, "테스트용 파일")
+        
+        // 결과 검증
+        Assertions.assertEquals("success", result["status"])
+        Assertions.assertEquals("test-upload.txt", result["fileName"])
+        Assertions.assertEquals(textContent.toByteArray().size.toLong(), result["fileSize"])
+        Assertions.assertTrue((result["splitDocuments"] as Int) > 0, "분할된 문서가 없습니다")
+        
+        println("파일 업로드 결과:")
+        println("- 파일명: ${result["fileName"]}")
+        println("- 파일 크기: ${result["fileSize"]} bytes")
+        println("- 원본 문서 수: ${result["originalDocuments"]}")
+        println("- 분할된 문서 수: ${result["splitDocuments"]}")
+        println("- 업로드 시간: ${result["uploadTime"]}")
+
+        // 잠시 대기 (인덱싱 완료를 위해)
+        Thread.sleep(2000)
+
+        // 업로드된 파일 내용 검색 테스트
+        val searchResults = vectorStoreService.searchSimilar("파일 업로드 테스트", topK = 3, threshold = 0.5)
+        
+        val foundUploadedContent = searchResults.any { doc ->
+            doc.text!!.contains("Spring AI 파일 업로드 테스트") || 
+            doc.metadata["filename"] == "test-upload.txt"
+        }
+        
+        println("\n검색 결과:")
+        searchResults.forEach { doc ->
+            println("- ${doc.text?.take(100)}...")
+            println("  메타데이터: ${doc.metadata}")
+        }
+        
+        Assertions.assertTrue(foundUploadedContent, "업로드된 파일 내용을 검색할 수 없습니다")
+        
+        println("\n✅ 파일 업로드 및 벡터 저장 테스트 성공")
+    }
+
+    @Test
+    @Order(9)
+    fun `09_다양한_파일_타입_업로드_테스트`() {
+        // PDF 파일 시뮬레이션 (실제로는 텍스트 내용)
+        val pdfContent = "PDF 문서 내용 시뮬레이션 - Spring AI PDF Reader 테스트"
+        val mockPdfFile = MockMultipartFile(
+            "file",
+            "test.pdf",
+            "application/pdf",
+            pdfContent.toByteArray()
+        )
+
+        // 마크다운 파일
+        val markdownContent = """
+            # Markdown 테스트 문서
+            
+            ## Spring AI 기능
+            - 문서 처리
+            - 벡터 검색
+            - RAG 구현
+            
+            **중요**: 이 문서는 마크다운 형식입니다.
+        """.trimIndent()
+        
+        val mockMarkdownFile = MockMultipartFile(
+            "file",
+            "test.md",
+            "text/markdown",
+            markdownContent.toByteArray()
+        )
+
+        // PDF 파일 업로드 테스트 (실제로는 텍스트로 처리됨)
+        val pdfResult = vectorStoreService.processAndStoreFile(mockPdfFile)
+        Assertions.assertEquals("success", pdfResult["status"])
+        println("PDF 파일 처리 결과: ${pdfResult["fileName"]}, 분할 문서 수: ${pdfResult["splitDocuments"]}")
+
+        // 마크다운 파일 업로드 테스트
+        val mdResult = vectorStoreService.processAndStoreFile(mockMarkdownFile)
+        Assertions.assertEquals("success", mdResult["status"])
+        println("마크다운 파일 처리 결과: ${mdResult["fileName"]}, 분할 문서 수: ${mdResult["splitDocuments"]}")
+
+        // 잠시 대기
+        Thread.sleep(1500)
+
+        // 업로드된 파일들 검색
+        val searchResults = vectorStoreService.searchSimilar("Spring AI", topK = 5, threshold = 0.3)
+        
+        val foundPdfContent = searchResults.any { doc -> doc.metadata["filename"] == "test.pdf" }
+        val foundMarkdownContent = searchResults.any { doc -> doc.metadata["filename"] == "test.md" }
+        
+        println("\n다양한 파일 타입 검색 결과:")
+        searchResults.forEach { doc ->
+            println("- 파일: ${doc.metadata["filename"]}, 내용: ${doc.text?.take(50)}...")
+        }
+
+        Assertions.assertTrue(foundPdfContent, "PDF 파일 내용을 찾을 수 없습니다")
+        Assertions.assertTrue(foundMarkdownContent, "마크다운 파일 내용을 찾을 수 없습니다")
+
+        println("\n✅ 다양한 파일 타입 업로드 테스트 성공")
     }
 }

@@ -2,6 +2,7 @@ package xyz.srunners.aiembedded.openai.controller
 
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import xyz.srunners.aiembedded.openai.service.VectorStoreService
 
 data class AddDocumentRequest(
@@ -109,6 +110,30 @@ class VectorStoreController(
         } catch (e: Exception) {
             ResponseEntity.badRequest().body(
                 mapOf("error" to "임베딩 생성 실패: ${e.message}")
+            )
+        }
+    }
+
+    /**
+     * 파일 업로드 및 벡터 스토어 저장 API
+     */
+    @PostMapping("/upload", consumes = ["multipart/form-data"])
+    fun uploadFile(
+        @RequestParam("file") file: MultipartFile,
+        @RequestParam(value = "metadata", required = false) additionalMetadata: String? = null
+    ): ResponseEntity<Map<String, Any>> {
+        return try {
+            if (file.isEmpty) {
+                return ResponseEntity.badRequest().body(
+                    mapOf("error" to "파일이 비어있습니다.")
+                )
+            }
+
+            val result = vectorStoreService.processAndStoreFile(file, additionalMetadata)
+            ResponseEntity.ok(result)
+        } catch (e: Exception) {
+            ResponseEntity.badRequest().body(
+                mapOf("error" to "파일 업로드 실패: ${e.message}")
             )
         }
     }

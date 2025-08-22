@@ -21,6 +21,12 @@ class ChatController(
         return "chat"
     }
 
+    // 파일 업로드 페이지 렌더링
+    @GetMapping("/upload")
+    fun uploadPage(): String {
+        return "upload"
+    }
+
     @ResponseBody
     @PostMapping("/chat")
     fun chat(@RequestBody body: Map<String, String>) = openAiService.generate(body.getValue("text"))
