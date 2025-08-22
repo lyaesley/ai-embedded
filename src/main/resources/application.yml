@@ -13,6 +13,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        use_sql_comments: true  # SQL 주석 추가
+        highlight_sql: true     # SQL 하이라이팅 (콘솔에서)
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           # PGvector
@@ -46,6 +48,11 @@ logging:
     org.springframework.jdbc: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.jdbc.core.JdbcTemplate: TRACE
+    org.springframework.jdbc.core.StatementCreatorUtils: TRACE
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
 
 server:
   port: 8080

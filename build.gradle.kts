@@ -53,6 +53,7 @@ dependencies {
     // 문서 처리
     implementation("org.springframework.ai:spring-ai-tika-document-reader")
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")
+    implementation("org.springframework.ai:spring-ai-markdown-document-reader")
 
     // template
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
