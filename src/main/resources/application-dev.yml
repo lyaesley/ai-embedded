@@ -1,0 +1,22 @@
+# application-dev.yml
+spring:
+  datasource:
+    hikari:
+      pool-name: Leader
+      auto-commit: false
+      minimum-idle: 20
+      maximum-pool-size: 20
+      driver-class-name: org.postgresql.Driver
+      jdbc-url: jdbc:postgresql://dalgona-dev-postgre-rds.cluster-cfsgmoi1ceut.ap-northeast-2.rds.amazonaws.com:5432/seeddev?escapeSyntaxCallMode=callIfNoReturn
+      username: sedapp
+      password: sedapp
+
+      follower:
+        pool-name: Follower
+        auto-commit: false
+        minimum-idle: 20
+        maximum-pool-size: 20
+        driver-class-name: org.postgresql.Driver
+        jdbc-url: jdbc:postgresql://dalgona-dev-postgre-rds.cluster-ro-cfsgmoi1ceut.ap-northeast-2.rds.amazonaws.com:5432/seeddev?escapeSyntaxCallMode=callIfNoReturn
+        username: sedsel
+        password: sedsel

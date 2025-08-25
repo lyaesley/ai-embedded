@@ -34,55 +34,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        
-        /* 반응형 디자인 */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .chat-container {
-                width: 100%;
-                height: calc(100vh - 20px);
-                border-radius: 10px;
-            }
-            
-            .chat-header {
-                padding: 15px;
-                font-size: 16px;
-            }
-            
-            .chat-messages {
-                padding: 15px 15px 15px 40px;
-            }
-            
-            .chat-input {
-                padding: 15px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .chat-container {
-                border-radius: 0;
-                height: 100vh;
-            }
-            
-            body {
-                padding: 0;
-            }
-            
-            .bot-message::before {
-                left: -25px;
-                font-size: 16px;
-            }
-        }
-        
-        @media (min-width: 1200px) {
-            .chat-container {
-                max-width: 1000px;
-            }
-        }
-        
+
         .chat-header {
             background: #667eea;
             color: white;
@@ -90,6 +42,33 @@
             text-align: center;
             font-weight: bold;
             font-size: 18px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .header-buttons {
+            position: absolute;
+            right: 20px;
+        }
+
+        .upload-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: normal;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .upload-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         
         .chat-messages {
@@ -195,12 +174,84 @@
             34%, 66% { content: '..'; }
             67%, 100% { content: '...'; }
         }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .chat-container {
+                width: 100%;
+                height: calc(100vh - 20px);
+                border-radius: 10px;
+            }
+
+            .chat-header {
+                padding: 15px;
+                font-size: 16px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .header-buttons {
+                position: static;
+            }
+
+            .upload-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            .chat-messages {
+                padding: 15px 15px 15px 40px;
+            }
+
+            .chat-input {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chat-container {
+                border-radius: 0;
+                height: 100vh;
+            }
+
+            body {
+                padding: 0;
+            }
+
+            .bot-message::before {
+                left: -25px;
+                font-size: 16px;
+            }
+
+            .chat-header {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .upload-btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .chat-container {
+                max-width: 1000px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
             AI 채팅봇
+            <div class="header-buttons">
+                <a href="/upload" class="upload-btn">📁 파일 업로드</a>
+            </div>
         </div>
         
         <div class="chat-messages" id="chatMessages">

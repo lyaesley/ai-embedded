@@ -1,0 +1,7 @@
+# application-local.yml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/n8n
+    username: n8n
+    password: "@tndmsgh2122"
+    driver-class-name: org.postgresql.Driver
