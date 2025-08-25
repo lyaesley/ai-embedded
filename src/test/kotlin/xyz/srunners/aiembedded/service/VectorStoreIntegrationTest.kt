@@ -228,7 +228,7 @@ class VectorStoreIntegrationTest {
         )
 
         // 파일 업로드 및 처리
-        val result = vectorStoreService.processAndStoreFile(mockFile, "테스트용 파일")
+        val result = vectorStoreService.processAndStoreFile(mockFile, null)
         
         // 결과 검증
         Assertions.assertEquals("success", result["status"])
@@ -324,5 +324,110 @@ class VectorStoreIntegrationTest {
         Assertions.assertTrue(foundMarkdownContent, "마크다운 파일 내용을 찾을 수 없습니다")
 
         println("\n✅ 다양한 파일 타입 업로드 테스트 성공")
+    }
+
+    @Test
+    @Order(10)
+    fun `10_문서_버전_관리_테스트`() {
+        val docId = "TEST-DOC-001"
+        
+        // 첫 번째 버전 업로드
+        val version1Content = """
+            문서 버전 관리 테스트 - 버전 1.0
+            
+            이 문서는 버전 관리 기능을 테스트하기 위한 첫 번째 버전입니다.
+            초기 내용입니다.
+        """.trimIndent()
+        
+        val mockFileV1 = MockMultipartFile(
+            "file",
+            "test-versioning-v1.txt",
+            "text/plain",
+            version1Content.toByteArray()
+        )
+
+        val additionalMetadata = mapOf(
+            "version" to "1.0",
+            "category" to "테스트"
+        )
+
+        // 첫 번째 버전 업로드
+        val resultV1 = vectorStoreService.processAndStoreFileWithVersioning(mockFileV1, docId, additionalMetadata)
+        
+        Assertions.assertEquals("success", resultV1["status"])
+        Assertions.assertEquals(docId, resultV1["docId"])
+        println("첫 번째 버전 업로드 완료: ${resultV1["fileName"]}")
+
+        // 잠시 대기
+        Thread.sleep(2000)
+
+        // 첫 번째 버전 검색 확인
+        val searchV1 = vectorStoreService.searchWithMetadataFilter("버전 관리", "docId", docId, 10)
+        Assertions.assertTrue(searchV1.isNotEmpty(), "첫 번째 버전을 찾을 수 없습니다")
+        println("첫 번째 버전 검색 결과: ${searchV1.size}개 문서")
+
+        // 두 번째 버전 업로드
+        val version2Content = """
+            문서 버전 관리 테스트 - 버전 2.0
+            
+            이 문서는 버전 관리 기능을 테스트하기 위한 두 번째 버전입니다.
+            업데이트된 내용입니다.
+            새로운 기능이 추가되었습니다.
+        """.trimIndent()
+        
+        val mockFileV2 = MockMultipartFile(
+            "file",
+            "test-versioning-v2.txt",
+            "text/plain",
+            version2Content.toByteArray()
+        )
+
+        val additionalMetadataV2 = mapOf(
+            "version" to "2.0",
+            "category" to "테스트"
+        )
+
+        // 두 번째 버전 업로드 (기존 문서 교체)
+        val resultV2 = vectorStoreService.processAndStoreFileWithVersioning(mockFileV2, docId, additionalMetadataV2)
+        
+        Assertions.assertEquals("success", resultV2["status"])
+        Assertions.assertEquals(docId, resultV2["docId"])
+        println("두 번째 버전 업로드 완료: ${resultV2["fileName"]}")
+
+        // 잠시 대기
+        Thread.sleep(2000)
+
+        // 최종 검색 - 두 번째 버전만 존재해야 함
+        val searchFinal = vectorStoreService.searchWithMetadataFilter("버전 관리", "docId", docId, 10)
+        
+        println("\n최종 검색 결과:")
+        searchFinal.forEach { doc ->
+            println("- 내용: ${doc.text?.take(50)}...")
+            println("  메타데이터: ${doc.metadata}")
+        }
+        
+        // 두 번째 버전 내용이 포함되어 있는지 확인
+        val hasV2Content = searchFinal.any { doc ->
+            doc.text?.contains("버전 2.0") == true || doc.text?.contains("업데이트된 내용") == true
+        }
+        
+        // 첫 번째 버전 내용이 제거되었는지 확인
+        val hasV1Content = searchFinal.any { doc ->
+            doc.text?.contains("버전 1.0") == true && !doc.text?.contains("버전 2.0")!!
+        }
+        
+        Assertions.assertTrue(hasV2Content, "두 번째 버전 내용을 찾을 수 없습니다")
+        Assertions.assertFalse(hasV1Content, "첫 번째 버전 내용이 여전히 존재합니다")
+        
+        // 모든 결과의 docId가 동일한지 확인
+        val allSameDocId = searchFinal.all { doc ->
+            doc.metadata["docId"] == docId
+        }
+        Assertions.assertTrue(allSameDocId, "검색된 문서들의 docId가 일치하지 않습니다")
+
+        println("\n✅ 문서 버전 관리 테스트 성공")
+        println("- 기존 버전 삭제: 성공")
+        println("- 새 버전 저장: 성공")
+        println("- 버전 교체 검증: 성공")
     }
 }

@@ -221,6 +221,19 @@
                     </label>
                 </div>
                 
+                <input type="text" class="metadata-input" id="docIdInput" 
+                       placeholder="문서ID (필수)" maxlength="50" required>
+                
+                <select class="metadata-input" id="categorySelect">
+                    <option value="">카테고리 선택 (선택사항)</option>
+                    <option value="정책서">정책서</option>
+                    <option value="개인정보처리방침">개인정보처리방침</option>
+                    <option value="qna">QnA</option>
+                </select>
+                
+                <input type="text" class="metadata-input" id="versionInput" 
+                       placeholder="파일 버전 (예: v1.0)" maxlength="50">
+                
                 <input type="text" class="metadata-input" id="metadataInput" 
                        placeholder="추가 정보 (선택사항)" maxlength="200">
                 
@@ -247,6 +260,9 @@
     <script>
         const fileInput = document.getElementById('fileInput');
         const fileLabel = document.getElementById('fileLabel');
+        const docIdInput = document.getElementById('docIdInput');
+        const categorySelect = document.getElementById('categorySelect');
+        const versionInput = document.getElementById('versionInput');
         const metadataInput = document.getElementById('metadataInput');
         const uploadButton = document.getElementById('uploadButton');
         const loading = document.getElementById('loading');
@@ -307,6 +323,14 @@
                 return;
             }
             
+            // 문서ID 필수 검증
+            const docId = docIdInput.value.trim();
+            if (!docId) {
+                alert('문서ID를 입력해주세요.');
+                docIdInput.focus();
+                return;
+            }
+            
             uploadFile();
         });
         
@@ -315,9 +339,26 @@
             const formData = new FormData();
             formData.append('file', selectedFile);
             
+            // 문서ID 추가 (필수)
+            const docId = docIdInput.value.trim();
+            formData.append('docId', docId);
+            
+            // 카테고리 값 추가
+            const category = categorySelect.value.trim();
+            if (category) {
+                formData.append('category', category);
+            }
+            
+            // 버전 값 추가
+            const version = versionInput.value.trim();
+            if (version) {
+                formData.append('version', version);
+            }
+            
+            // 추가 메타데이터 추가
             const metadata = metadataInput.value.trim();
             if (metadata) {
-                formData.append('metadata', metadata);
+                formData.append('additionalMetadata', metadata);
             }
             
             // UI 상태 변경

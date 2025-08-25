@@ -105,9 +105,142 @@ class VectorStoreService(
     }
 
     /**
-     * 파일 업로드 및 벡터 스토어 저장
+     * 파일 업로드 및 벡터 스토어 저장 (문서 버전 관리)
      */
-    fun processAndStoreFile(file: MultipartFile, additionalMetadata: String? = null): Map<String, Any> {
+    fun processAndStoreFileWithVersioning(file: MultipartFile, docId: String, additionalMetadata: Map<String, Any>? = null): Map<String, Any> {
+        val fileName = file.originalFilename ?: "unknown"
+        val fileExtension = fileName.substringAfterLast('.', "").lowercase()
+        val uploadTime = LocalDateTime.now().toString()
+        
+        try {
+            // 버전 정보 생성 (추가 메타데이터에서 버전 정보 추출 또는 기본값 설정)
+            val version = additionalMetadata?.get("version")?.toString() ?: "1.0"
+            val currentTime = System.currentTimeMillis()
+            
+            // 기본 메타데이터 생성 (docId 포함)
+            val baseMetadata = mutableMapOf<String, Any>(
+                "docId" to docId,
+                "version" to version,
+                "filename" to fileName,
+                "fileSize" to file.size,
+                "contentType" to (file.contentType ?: "unknown"),
+                "uploadTime" to uploadTime,
+                "lastUpdated" to currentTime
+            )
+            
+            // 추가 메타데이터가 있으면 포함
+            additionalMetadata?.let {
+                baseMetadata.putAll(it)
+            }
+
+            // 기존 버전 삭제 (동일한 docId를 가진 모든 문서들)
+            try {
+                println("문서 ID '$docId'의 기존 버전들을 삭제합니다...")
+                
+                // 필터 표현식을 사용하여 기존 문서 삭제
+                val filterExpression = "docId == '$docId'"
+                vectorStore.delete(filterExpression)
+                
+                println("기존 버전 삭제 완료: docId = $docId")
+            } catch (e: Exception) {
+                println("기존 문서 삭제 중 오류: ${e.message}")
+                // 삭제가 실패해도 새 버전은 저장하도록 계속 진행
+                println("삭제 실패했지만 새 버전 저장을 계속 진행합니다.")
+            }
+
+            // ETL 파이프라인 패턴에 따른 DocumentReader 사용
+            val documents = when (fileExtension) {
+                "pdf" -> {
+                    val resource = InputStreamResource(file.inputStream)
+                    val pdfReader = PagePdfDocumentReader(
+                        resource,
+                        PdfDocumentReaderConfig.builder()
+                            .withPageTopMargin(0)
+                            .withPageExtractedTextFormatter(
+                                ExtractedTextFormatter.builder()
+                                    .withNumberOfTopTextLinesToDelete(0)
+                                    .build()
+                            )
+                            .withPagesPerDocument(1)
+                            .build()
+                    )
+                    pdfReader.read()
+                }
+                "md", "markdown" -> {
+                    val resource = InputStreamResource(file.inputStream)
+                    val config = MarkdownDocumentReaderConfig.builder()
+                        .withHorizontalRuleCreateDocument(true)
+                        .withIncludeCodeBlock(true)
+                        .withIncludeBlockquote(true)
+                        .withAdditionalMetadata("filename", fileName)
+                        .build()
+                    val markdownReader = MarkdownDocumentReader(resource, config)
+                    markdownReader.get()
+                }
+                "txt", "text" -> {
+                    val resource = InputStreamResource(file.inputStream)
+                    val textReader = TextReader(resource)
+                    // TextReader는 getCustomMetadata() 메소드 사용
+                    textReader.customMetadata.putAll(baseMetadata)
+                    textReader.get()
+                }
+                "doc", "docx", "ppt", "pptx", "xls", "xlsx", "rtf", "odt", "ods", "odp" -> {
+                    val resource = InputStreamResource(file.inputStream)
+                    val tikaReader = TikaDocumentReader(resource)
+                    tikaReader.get()
+                }
+                else -> {
+                    // 기타 파일의 경우 TikaDocumentReader로 처리
+                    val resource = InputStreamResource(file.inputStream)
+                    val tikaReader = TikaDocumentReader(resource)
+                    tikaReader.get()
+                }
+            }
+
+            // 메타데이터를 각 문서에 추가 (null-safe 처리)
+            val documentsWithMetadata = documents.map { document ->
+                val cleanMetadata = document.metadata.filterValues { it != null }.toMutableMap()
+                cleanMetadata.putAll(baseMetadata)
+                Document(document.text ?: "", cleanMetadata)
+            }
+            
+            // ETL 파이프라인 패턴 적용: DocumentTransformer + DocumentWriter
+            val textSplitter = TokenTextSplitter()
+            
+            // ETL 패턴: Transform -> Write
+            val splitDocuments = textSplitter.apply(documentsWithMetadata)
+            vectorStore.accept(splitDocuments)
+
+            println("새 버전 저장 완료: $fileName (docId: $docId, version: $version)")
+            println("원본 문서 수: ${documentsWithMetadata.size}")
+            println("분할된 문서 수: ${splitDocuments.size}")
+
+            return mapOf(
+                "status" to "success",
+                "docId" to docId,
+                "version" to version,
+                "fileName" to fileName,
+                "fileSize" to file.size,
+                "originalDocuments" to documentsWithMetadata.size,
+                "splitDocuments" to splitDocuments.size,
+                "uploadTime" to uploadTime,
+                "message" to "문서 버전이 성공적으로 업데이트되었습니다."
+            )
+        } catch (e: Exception) {
+            println("파일 처리 중 오류 발생: ${e.message}")
+            return mapOf(
+                "status" to "error",
+                "docId" to docId,
+                "fileName" to fileName,
+                "message" to "파일 처리 실패: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * 파일 업로드 및 벡터 스토어 저장 (기존 메소드 유지)
+     */
+    fun processAndStoreFile(file: MultipartFile, additionalMetadata: Map<String, Any>? = null): Map<String, Any> {
         val fileName = file.originalFilename ?: "unknown"
         val fileExtension = fileName.substringAfterLast('.', "").lowercase()
         val uploadTime = LocalDateTime.now().toString()
@@ -123,7 +256,7 @@ class VectorStoreService(
             
             // 추가 메타데이터가 있으면 포함
             additionalMetadata?.let {
-                baseMetadata["additionalInfo"] = it
+                baseMetadata.putAll(it)
             }
 
             // ETL 파이프라인 패턴에 따른 DocumentReader 사용

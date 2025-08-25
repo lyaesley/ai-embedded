@@ -120,7 +120,8 @@ class VectorStoreController(
     @PostMapping("/upload", consumes = ["multipart/form-data"])
     fun uploadFile(
         @RequestParam("file") file: MultipartFile,
-        @RequestParam(value = "metadata", required = false) additionalMetadata: String? = null
+        @RequestParam("docId") docId: String,
+        @RequestParam metadataMap: Map<String, Any>
     ): ResponseEntity<Map<String, Any>> {
         return try {
             if (file.isEmpty) {
@@ -129,7 +130,16 @@ class VectorStoreController(
                 )
             }
 
-            val result = vectorStoreService.processAndStoreFile(file, additionalMetadata)
+            if (docId.isBlank()) {
+                return ResponseEntity.badRequest().body(
+                    mapOf("error" to "문서ID가 비어있습니다.")
+                )
+            }
+
+            // docId를 제외한 메타데이터 처리
+            val metadata = metadataMap.filterKeys { it != "file" && it != "docId" }
+
+            val result = vectorStoreService.processAndStoreFileWithVersioning(file, docId, metadata)
             ResponseEntity.ok(result)
         } catch (e: Exception) {
             ResponseEntity.badRequest().body(
