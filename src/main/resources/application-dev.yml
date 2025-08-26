@@ -2,21 +2,31 @@
 spring:
   datasource:
     hikari:
-      pool-name: Leader
-      auto-commit: false
+      pool-name: "sedadm"
       minimum-idle: 20
       maximum-pool-size: 20
       driver-class-name: org.postgresql.Driver
       jdbc-url: jdbc:postgresql://dalgona-dev-postgre-rds.cluster-cfsgmoi1ceut.ap-northeast-2.rds.amazonaws.com:5432/seeddev?escapeSyntaxCallMode=callIfNoReturn
-      username: sedapp
-      password: sedapp
+      username: ${DEV_DB_USER}
+      password: ${DEV_DB_PASSWORD}
 
-      follower:
-        pool-name: Follower
-        auto-commit: false
-        minimum-idle: 20
-        maximum-pool-size: 20
-        driver-class-name: org.postgresql.Driver
-        jdbc-url: jdbc:postgresql://dalgona-dev-postgre-rds.cluster-ro-cfsgmoi1ceut.ap-northeast-2.rds.amazonaws.com:5432/seeddev?escapeSyntaxCallMode=callIfNoReturn
-        username: sedsel
-        password: sedsel
+  # Spring AI
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:your-api-key-here}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-3-small
+
+    # Vector Store
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
+        table-name: vector_store
+        schema-name: sedadm

@@ -85,6 +85,7 @@
             padding: 12px 16px;
             border-radius: 18px;
             word-wrap: break-word;
+            line-height: 1.4;
         }
         
         .user-message {
@@ -92,6 +93,7 @@
             color: white;
             align-self: flex-end;
             margin-left: auto;
+            white-space: pre-wrap;
         }
         
         .bot-message {
@@ -102,14 +104,112 @@
         }
         
         .bot-message::before {
-            content: '🤖';
+            content: '';
             position: absolute;
             left: -30px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            background-image: url('https://static.elandrs.com/f/img/favicon/emall.ico');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
-        
+
+        /* 마크다운 스타일링 */
+        .bot-message h1, .bot-message h2, .bot-message h3, .bot-message h4, .bot-message h5, .bot-message h6 {
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+        }
+
+        .bot-message h1 { font-size: 1.4em; color: #333; }
+        .bot-message h2 { font-size: 1.3em; color: #444; }
+        .bot-message h3 { font-size: 1.2em; color: #555; }
+        .bot-message h4 { font-size: 1.1em; color: #666; }
+
+        .bot-message p {
+            margin: 4px 0;
+        }
+
+        .bot-message ul, .bot-message ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .bot-message li {
+            margin: 2px 0;
+        }
+
+        .bot-message blockquote {
+            border-left: 4px solid #667eea;
+            margin: 8px 0;
+            padding: 4px 0 4px 12px;
+            background: rgba(102, 126, 234, 0.1);
+            font-style: italic;
+        }
+
+        .bot-message code {
+            background: #e8e8e8;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .bot-message pre {
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .bot-message pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .bot-message strong {
+            font-weight: bold;
+        }
+
+        .bot-message em {
+            font-style: italic;
+        }
+
+        .bot-message a {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        .bot-message a:hover {
+            color: #5a67d8;
+        }
+
+        .bot-message hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 12px 0;
+        }
+
+        .bot-message table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .bot-message th, .bot-message td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .bot-message th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
         .chat-input {
             padding: 20px;
             border-top: 1px solid #eee;
@@ -225,6 +325,8 @@
             .bot-message::before {
                 left: -25px;
                 font-size: 16px;
+                height: 16px;
+
             }
 
             .chat-header {
@@ -270,16 +372,57 @@
         </div>
     </div>
 
+    <!-- Marked.js 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const chatMessages = document.getElementById('chatMessages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typingIndicator');
 
+        // Marked.js 설정
+        marked.setOptions({
+            breaks: true,      // 줄바꿈을 <br>로 변환
+            gfm: true,        // GitHub Flavored Markdown 활성화
+            sanitize: false,  // HTML 허용 (XSS 방지는 별도 처리)
+            smartypants: true // 따옴표, 대시 등을 스마트하게 변환
+        });
+
+        // HTML 이스케이프 함수 (XSS 방지)
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 마크다운을 HTML로 변환하는 함수
+        function formatMessage(text) {
+            try {
+                // XSS 방지를 위해 일부 태그만 허용
+                const htmlContent = marked.parse(text);
+
+                // 기본적인 XSS 방지 (script 태그 제거)
+                const cleanHtml = htmlContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+                return cleanHtml;
+            } catch (error) {
+                console.error('마크다운 변환 오류:', error);
+                // 마크다운 변환 실패시 일반 텍스트로 처리
+                return escapeHtml(text).replace(/\n/g, '<br>');
+            }
+        }
+
         function addMessage(message, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = message;
+
+            if (isUser) {
+                // 사용자 메시지는 단순히 textContent 사용
+                messageDiv.textContent = message;
+            } else {
+                // 봇 메시지는 마크다운 포맷팅 적용
+                messageDiv.innerHTML = formatMessage(message);
+            }
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -359,7 +502,9 @@
                     
                     const chunk = decoder.decode(value);
                     botMessage += chunk;
-                    botMessageDiv.textContent = botMessage;
+
+                    // 실시간으로 마크다운 포맷팅 적용
+                    botMessageDiv.innerHTML = formatMessage(botMessage);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
 

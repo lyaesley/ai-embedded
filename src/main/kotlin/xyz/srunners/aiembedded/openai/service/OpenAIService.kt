@@ -2,6 +2,9 @@ package xyz.srunners.aiembedded.openai.service
 
 import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.client.ChatClientRequest
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor
 import org.springframework.ai.chat.memory.ChatMemoryRepository
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
@@ -9,8 +12,8 @@ import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.messages.MessageType
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
+import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.prompt.Prompt
-import org.springframework.ai.chat.prompt.PromptTemplate
 import org.springframework.ai.embedding.EmbeddingRequest
 import org.springframework.ai.image.ImageGeneration
 import org.springframework.ai.image.ImagePrompt
@@ -20,7 +23,6 @@ import org.springframework.ai.openai.api.OpenAiAudioApi
 import org.springframework.ai.openai.api.OpenAiAudioApi.TranscriptResponseFormat
 import org.springframework.ai.openai.audio.speech.SpeechPrompt
 import org.springframework.ai.vectorstore.SearchRequest
-import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
@@ -28,7 +30,9 @@ import reactor.core.publisher.Flux
 import xyz.srunners.aiembedded.openai.dto.CityResponseDTO
 import xyz.srunners.aiembedded.openai.entity.ChatEntity
 import xyz.srunners.aiembedded.openai.repository.ChatRepository
+import xyz.srunners.aiembedded.openai.template.AIPromptTemplate
 import xyz.srunners.aiembedded.openai.tools.ChatTools
+import java.util.function.Function
 
 
 @Service
@@ -70,8 +74,6 @@ class OpenAIService(
     // chatmodel: response stream 멀티턴&히스토리
     fun generateStream(text: String): Flux<String?> {
 
-        val chatClient = ChatClient.create(openAiChatModel)
-
         //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
         val userId = "disp" + "_" + "1"
 
@@ -88,45 +90,46 @@ class OpenAIService(
             .build()
 
         // 신규 메시지 추가
-        chatMemory.add(userId, UserMessage(text))
+//        chatMemory.add(userId, UserMessage(text))
 
-        val options = OpenAiChatOptions.builder()
-            .model("gpt-4o-mini")
-            .temperature(0.7)
+        // 로깅
+        val loggerAdvisor = SimpleLoggerAdvisor(
+            { request: ChatClientRequest? -> "Custom request: " + request!!.prompt().getUserMessage() },
+            { response: ChatResponse? -> "Custom response: " + response!!.getResult() },
+            0
+        )
+
+        // 챗메모리
+        val chatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
+            .conversationId(userId)
             .build()
-
         // RAG
         // text -> 임베딩
         // 임베딩 -> DB 에서 조회 n 추출
         // 문서를 프롬프트에 붙여서
 
         val ragAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
-            .searchRequest(SearchRequest.builder().similarityThreshold(0.5).topK(6).build())
+            .searchRequest(SearchRequest.builder().similarityThreshold(0.3).topK(6).build())
+            .promptTemplate(AIPromptTemplate.QUESTION_ANSWER.createPromptTemplate())
             .build()
 
-        // 프롬프트
-        val prompt = Prompt(chatMemory.get(userId), options)
+        val chatClient = ChatClient.builder(openAiChatModel)
+            .defaultAdvisors(chatMemoryAdvisor, ragAdvisor, loggerAdvisor)
+            .build()
 
         // 응답 메시지를 저장할 임시 버퍼
         val responseBuffer = StringBuilder()
 
-        // 요청 및 응답
-        return chatClient.prompt(prompt)
+        return chatClient.prompt()
             .tools(ChatTools())
-            .advisors(ragAdvisor)
+            .user(text)
             .stream()
             .content()
-            .map {
+            .mapNotNull {
                 responseBuffer.append(it)
                 it
             }
             .doOnComplete {
-                // responseBuffer의 내용을 정리 (혹시 남아있을 수 있는 null 문자열 제거)
-                val cleanContent = responseBuffer.toString()
-                    .replace("null", "") // "null" 문자열 제거
-                    .trim() // 앞뒤 공백 제거
-
-                chatMemory.add(userId, AssistantMessage(cleanContent))
                 chatMemoryRepository.saveAll(userId, chatMemory.get(userId))
 
                 // 전체 대화 저장용

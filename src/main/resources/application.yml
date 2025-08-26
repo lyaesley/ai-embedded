@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local  # 기본 프로파일을 local로 설정
+    active: dev  # 기본 프로파일을 local로 설정
   # JPA
   jpa:
     hibernate:
@@ -28,15 +28,6 @@ spring:
       embedding:
         options:
           model: text-embedding-3-small
-
-    # Vector Store
-    vectorstore:
-      pgvector:
-        index-type: HNSW
-        distance-type: COSINE_DISTANCE
-        dimensions: 1536
-        table-name: vector_store
-        schema-name: public
 
 logging:
   level:
