@@ -452,7 +452,7 @@
         async loadChatHistory() {
             try {
                 // const userId = this.config.userId;
-                const userId = 'disp_1'
+                const userId = 'lee_junyoung06'
                 const response = await fetch(`${this.config.apiUrl}/chat/history/${userId}`, {
                     method: 'POST'
                 });

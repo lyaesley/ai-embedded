@@ -32,6 +32,8 @@ import xyz.srunners.aiembedded.openai.entity.ChatEntity
 import xyz.srunners.aiembedded.openai.repository.ChatRepository
 import xyz.srunners.aiembedded.openai.template.AIPromptTemplate
 import xyz.srunners.aiembedded.openai.tools.ChatTools
+import xyz.srunners.aiembedded.openai.tools.WishTools
+import xyz.srunners.aiembedded.repository.WishRepository
 import java.util.function.Function
 
 
@@ -44,14 +46,15 @@ class OpenAIService(
     private val openAiAudioTranscriptionModel: OpenAiAudioTranscriptionModel,
     private val chatMemoryRepository: ChatMemoryRepository,
     private val chatRepository: ChatRepository,
-    private val vectorStore: PgVectorStore
+    private val vectorStore: PgVectorStore,
+    private val wishRepository: WishRepository
 ) {
 
     // chatmodel: response
     fun generate(text: String): String?{
 
         //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
-        val userId = "disp" + "_" + "1"
+        val userId = "lee_junyoung06"
 
         // 먼저 RAG 검색을 수행하여 메타데이터 정보 확보
         val ragDocuments = vectorStore.similaritySearch(
@@ -61,18 +64,6 @@ class OpenAIService(
                 .topK(6)
                 .build()
         )
-
-        // 메타데이터 정보를 포함한 사용자 메시지 생성
-        val sourcesInfo = ragDocuments.mapIndexed { index, doc ->
-            "참고문서${index + 1}: ${doc.metadata["title"]} (${doc.metadata["section"]})"
-        }.joinToString(", ")
-
-        val enhancedText = if (ragDocuments.isNotEmpty()) {
-            "$text\n\n[출처: $sourcesInfo]"
-        } else {
-            text
-        }
-
 
         val chatUserEntity = ChatEntity(
             userId = userId,
@@ -114,8 +105,8 @@ class OpenAIService(
         chatMemoryRepository.saveAll(userId, chatMemory.get(userId))
 
         val chatResponse = chatClient.prompt()
-            .tools(ChatTools())
-            .user(enhancedText)
+            .tools(ChatTools(), WishTools(wishRepository))
+            .user(text)
             .call()
             .chatResponse()
 
@@ -135,7 +126,7 @@ class OpenAIService(
     fun generateStream(text: String): Flux<String?> {
 
         //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
-        val userId = "disp" + "_" + "1"
+        val userId = "lee_junyoung06"
 
         // 먼저 RAG 검색을 수행하여 메타데이터 정보 확보
         val ragDocuments = vectorStore.similaritySearch(
@@ -147,15 +138,15 @@ class OpenAIService(
         )
 
         // 메타데이터 정보를 포함한 사용자 메시지 생성
-        val sourcesInfo = ragDocuments.mapIndexed { index, doc ->
-            "참고문서${index + 1}: ${doc.metadata["docId"]} (${doc.metadata["page_number"]})"
-        }.joinToString(", ")
-
-        val enhancedText = if (ragDocuments.isNotEmpty()) {
-            "$text\n\n[출처: $sourcesInfo]"
-        } else {
-            text
-        }
+//        val sourcesInfo = ragDocuments.mapIndexed { index, doc ->
+//            "참고문서${index + 1}: ${doc.metadata["docId"]} (${doc.metadata["page_number"]})"
+//        }.joinToString(", ")
+//
+//        val enhancedText = if (ragDocuments.isNotEmpty()) {
+//            "$text\n\n[출처: $sourcesInfo]"
+//        } else {
+//            text
+//        }
 
         val chatUserEntity = ChatEntity(
             userId = userId,
@@ -201,8 +192,8 @@ class OpenAIService(
         val responseBuffer = StringBuilder()
 
         return chatClient.prompt()
-            .tools(ChatTools())
-            .user(enhancedText)
+            .tools(ChatTools(), WishTools(wishRepository))
+            .user(text)
             .stream()
             .content()
             .mapNotNull {
@@ -226,7 +217,7 @@ class OpenAIService(
     fun generateStreamWithChatModel(text: String): Flux<String?> {
 
         //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
-        val userId = "disp" + "_" + "1"
+        val userId = "lee_junyoung06"
 
         val chatUserEntity = ChatEntity(
             userId = userId,

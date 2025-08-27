@@ -14,7 +14,7 @@ class OpenAIServiceTest {
 
     @Test
     fun 챗봇_동기호출() {
-        val generate = openAIService.generate("이벤트응모 방법 알려줘")
+        val generate = openAIService.generate("내 찜 정보 알려줘")
         println(generate)
     }
 }
