@@ -1,0 +1,448 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="ko">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>AI 챗봇 위젯</title>-->
+<!--    <style>-->
+<!--        /* 챗봇 플로팅 버튼 */-->
+<!--        .chatbot-toggle {-->
+<!--            position: fixed;-->
+<!--            bottom: 20px;-->
+<!--            right: 20px;-->
+<!--            width: 60px;-->
+<!--            height: 60px;-->
+<!--            background: #667eea;-->
+<!--            border-radius: 50%;-->
+<!--            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);-->
+<!--            cursor: pointer;-->
+<!--            z-index: 10000;-->
+<!--            display: flex;-->
+<!--            justify-content: center;-->
+<!--            align-items: center;-->
+<!--            transition: all 0.3s ease;-->
+<!--            border: none;-->
+<!--        }-->
+
+<!--        .chatbot-toggle:hover {-->
+<!--            background: #5a67d8;-->
+<!--            transform: scale(1.1);-->
+<!--            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);-->
+<!--        }-->
+
+<!--        .chatbot-icon {-->
+<!--            width: 32px;-->
+<!--            height: 32px;-->
+<!--            background-image: url('https://static.elandrs.com/f/img/favicon/emall.ico');-->
+<!--            background-size: contain;-->
+<!--            background-repeat: no-repeat;-->
+<!--            background-position: center;-->
+<!--            filter: brightness(0) invert(1);-->
+<!--        }-->
+
+<!--        /* 챗봇 위젯 컨테이너 */-->
+<!--        .chatbot-widget {-->
+<!--            position: fixed;-->
+<!--            bottom: 90px;-->
+<!--            right: 20px;-->
+<!--            width: 380px;-->
+<!--            height: 600px;-->
+<!--            background: white;-->
+<!--            border-radius: 15px;-->
+<!--            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);-->
+<!--            z-index: 9999;-->
+<!--            display: none;-->
+<!--            flex-direction: column;-->
+<!--            overflow: hidden;-->
+<!--            transform: scale(0);-->
+<!--            transform-origin: bottom right;-->
+<!--            transition: all 0.3s ease;-->
+<!--        }-->
+
+<!--        .chatbot-widget.show {-->
+<!--            display: flex;-->
+<!--            transform: scale(1);-->
+<!--        }-->
+
+<!--        /* 챗봇 헤더 */-->
+<!--        .widget-header {-->
+<!--            background: #667eea;-->
+<!--            color: white;-->
+<!--            padding: 15px 20px;-->
+<!--            display: flex;-->
+<!--            justify-content: space-between;-->
+<!--            align-items: center;-->
+<!--        }-->
+
+<!--        .widget-title {-->
+<!--            font-weight: bold;-->
+<!--            font-size: 16px;-->
+<!--        }-->
+
+<!--        .close-btn {-->
+<!--            background: none;-->
+<!--            border: none;-->
+<!--            color: white;-->
+<!--            font-size: 20px;-->
+<!--            cursor: pointer;-->
+<!--            padding: 0;-->
+<!--            width: 24px;-->
+<!--            height: 24px;-->
+<!--            display: flex;-->
+<!--            justify-content: center;-->
+<!--            align-items: center;-->
+<!--        }-->
+
+<!--        .close-btn:hover {-->
+<!--            background: rgba(255, 255, 255, 0.2);-->
+<!--            border-radius: 50%;-->
+<!--        }-->
+
+<!--        /* 챗봇 메시지 영역 */-->
+<!--        .widget-messages {-->
+<!--            flex: 1;-->
+<!--            padding: 15px;-->
+<!--            overflow-y: auto;-->
+<!--            display: flex;-->
+<!--            flex-direction: column;-->
+<!--            gap: 10px;-->
+<!--            background: #f8f9fa;-->
+<!--        }-->
+
+<!--        .widget-message {-->
+<!--            max-width: 85%;-->
+<!--            padding: 10px 14px;-->
+<!--            border-radius: 15px;-->
+<!--            word-wrap: break-word;-->
+<!--            line-height: 1.4;-->
+<!--            font-size: 14px;-->
+<!--        }-->
+
+<!--        .widget-user-message {-->
+<!--            background: #667eea;-->
+<!--            color: white;-->
+<!--            align-self: flex-end;-->
+<!--            margin-left: auto;-->
+<!--        }-->
+
+<!--        .widget-bot-message {-->
+<!--            background: white;-->
+<!--            color: #333;-->
+<!--            align-self: flex-start;-->
+<!--            position: relative;-->
+<!--            border: 1px solid #e9ecef;-->
+<!--        }-->
+
+<!--        .widget-bot-message::before {-->
+<!--            content: '';-->
+<!--            position: absolute;-->
+<!--            left: -25px;-->
+<!--            top: 12px;-->
+<!--            width: 16px;-->
+<!--            height: 16px;-->
+<!--            background-image: url('https://static.elandrs.com/f/img/favicon/emall.ico');-->
+<!--            background-size: contain;-->
+<!--            background-repeat: no-repeat;-->
+<!--            background-position: center;-->
+<!--        }-->
+
+<!--        /* 챗봇 입력 영역 */-->
+<!--        .widget-input {-->
+<!--            padding: 15px;-->
+<!--            border-top: 1px solid #e9ecef;-->
+<!--            display: flex;-->
+<!--            gap: 8px;-->
+<!--            background: white;-->
+<!--        }-->
+
+<!--        .widget-input input {-->
+<!--            flex: 1;-->
+<!--            padding: 10px 12px;-->
+<!--            border: 1px solid #ddd;-->
+<!--            border-radius: 20px;-->
+<!--            outline: none;-->
+<!--            font-size: 14px;-->
+<!--        }-->
+
+<!--        .widget-input input:focus {-->
+<!--            border-color: #667eea;-->
+<!--        }-->
+
+<!--        .widget-input button {-->
+<!--            background: #667eea;-->
+<!--            color: white;-->
+<!--            border: none;-->
+<!--            padding: 10px 16px;-->
+<!--            border-radius: 20px;-->
+<!--            cursor: pointer;-->
+<!--            font-size: 14px;-->
+<!--        }-->
+
+<!--        .widget-input button:hover {-->
+<!--            background: #5a67d8;-->
+<!--        }-->
+
+<!--        .widget-input button:disabled {-->
+<!--            background: #ccc;-->
+<!--            cursor: not-allowed;-->
+<!--        }-->
+
+<!--        /* 타이핑 인디케이터 */-->
+<!--        .widget-typing {-->
+<!--            display: none;-->
+<!--            align-self: flex-start;-->
+<!--            padding: 10px 14px;-->
+<!--            background: white;-->
+<!--            border: 1px solid #e9ecef;-->
+<!--            border-radius: 15px;-->
+<!--            color: #666;-->
+<!--            font-style: italic;-->
+<!--            font-size: 14px;-->
+<!--        }-->
+
+<!--        .typing-dots::after {-->
+<!--            content: '';-->
+<!--            animation: typing 1.5s infinite;-->
+<!--        }-->
+
+<!--        @keyframes typing {-->
+<!--            0%, 33% { content: '.'; }-->
+<!--            34%, 66% { content: '..'; }-->
+<!--            67%, 100% { content: '...'; }-->
+<!--        }-->
+
+<!--        /* 마크다운 스타일링 (위젯용으로 축소) */-->
+<!--        .widget-bot-message h1, .widget-bot-message h2, .widget-bot-message h3 {-->
+<!--            margin: 4px 0 2px 0;-->
+<!--            font-weight: bold;-->
+<!--            font-size: 1.1em;-->
+<!--        }-->
+
+<!--        .widget-bot-message p {-->
+<!--            margin: 2px 0;-->
+<!--        }-->
+
+<!--        .widget-bot-message ul, .widget-bot-message ol {-->
+<!--            margin: 4px 0;-->
+<!--            padding-left: 16px;-->
+<!--        }-->
+
+<!--        .widget-bot-message li {-->
+<!--            margin: 1px 0;-->
+<!--        }-->
+
+<!--        .widget-bot-message code {-->
+<!--            background: #f1f3f4;-->
+<!--            padding: 1px 3px;-->
+<!--            border-radius: 2px;-->
+<!--            font-family: monospace;-->
+<!--            font-size: 0.9em;-->
+<!--        }-->
+
+<!--        .widget-bot-message strong {-->
+<!--            font-weight: bold;-->
+<!--        }-->
+
+<!--        /* 모바일 반응형 */-->
+<!--        @media (max-width: 480px) {-->
+<!--            .chatbot-widget {-->
+<!--                width: calc(100vw - 40px);-->
+<!--                height: calc(100vh - 140px);-->
+<!--                bottom: 90px;-->
+<!--                right: 20px;-->
+<!--                left: 20px;-->
+<!--            }-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    &lt;!&ndash; 챗봇 플로팅 버튼 &ndash;&gt;-->
+<!--    <button class="chatbot-toggle" id="chatbotToggle">-->
+<!--        <div class="chatbot-icon"></div>-->
+<!--    </button>-->
+
+<!--    &lt;!&ndash; 챗봇 위젯 &ndash;&gt;-->
+<!--    <div class="chatbot-widget" id="chatbotWidget">-->
+<!--        <div class="widget-header">-->
+<!--            <span class="widget-title">AI 챗봇</span>-->
+<!--            <button class="close-btn" id="closeBtn">×</button>-->
+<!--        </div>-->
+
+<!--        <div class="widget-messages" id="widgetMessages">-->
+<!--            <div class="widget-message widget-bot-message">-->
+<!--                안녕하세요! 무엇을 도와드릴까요?-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <div class="widget-typing" id="widgetTyping">-->
+<!--            <span class="typing-dots">AI가 응답을 생성 중입니다</span>-->
+<!--        </div>-->
+
+<!--        <div class="widget-input">-->
+<!--            <input type="text" id="widgetInput" placeholder="메시지를 입력하세요..." />-->
+<!--            <button id="widgetSendBtn">전송</button>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Marked.js 라이브러리 &ndash;&gt;-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
+<!--    <script>-->
+<!--        class ChatbotWidget {-->
+<!--            constructor() {-->
+<!--                this.isOpen = false;-->
+<!--                this.chatMessages = document.getElementById('widgetMessages');-->
+<!--                this.messageInput = document.getElementById('widgetInput');-->
+<!--                this.sendButton = document.getElementById('widgetSendBtn');-->
+<!--                this.typingIndicator = document.getElementById('widgetTyping');-->
+<!--                this.widget = document.getElementById('chatbotWidget');-->
+<!--                this.toggleBtn = document.getElementById('chatbotToggle');-->
+<!--                this.closeBtn = document.getElementById('closeBtn');-->
+
+<!--                this.initEvents();-->
+<!--                this.setupMarked();-->
+<!--            }-->
+
+<!--            initEvents() {-->
+<!--                this.toggleBtn.addEventListener('click', () => this.toggleWidget());-->
+<!--                this.closeBtn.addEventListener('click', () => this.closeWidget());-->
+<!--                this.sendButton.addEventListener('click', () => this.sendMessage());-->
+<!--                this.messageInput.addEventListener('keypress', (e) => {-->
+<!--                    if (e.key === 'Enter') this.sendMessage();-->
+<!--                });-->
+<!--            }-->
+
+<!--            setupMarked() {-->
+<!--                marked.setOptions({-->
+<!--                    breaks: true,-->
+<!--                    gfm: true,-->
+<!--                    sanitize: false,-->
+<!--                    smartypants: true-->
+<!--                });-->
+<!--            }-->
+
+<!--            toggleWidget() {-->
+<!--                this.isOpen ? this.closeWidget() : this.openWidget();-->
+<!--            }-->
+
+<!--            openWidget() {-->
+<!--                this.widget.classList.add('show');-->
+<!--                this.isOpen = true;-->
+<!--                this.messageInput.focus();-->
+<!--                if (!this.historyLoaded) {-->
+<!--                    this.loadChatHistory();-->
+<!--                }-->
+<!--            }-->
+
+<!--            closeWidget() {-->
+<!--                this.widget.classList.remove('show');-->
+<!--                this.isOpen = false;-->
+<!--            }-->
+
+<!--            formatMessage(text) {-->
+<!--                try {-->
+<!--                    const htmlContent = marked.parse(text);-->
+<!--                    return htmlContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');-->
+<!--                } catch (error) {-->
+<!--                    return text.replace(/\n/g, '<br>');-->
+<!--                }-->
+<!--            }-->
+
+<!--            addMessage(message, isUser = false) {-->
+<!--                const messageDiv = document.createElement('div');-->
+<!--                messageDiv.className = `widget-message ${isUser ? 'widget-user-message' : 'widget-bot-message'}`;-->
+
+<!--                if (isUser) {-->
+<!--                    messageDiv.textContent = message;-->
+<!--                } else {-->
+<!--                    messageDiv.innerHTML = this.formatMessage(message);-->
+<!--                }-->
+
+<!--                this.chatMessages.appendChild(messageDiv);-->
+<!--                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;-->
+<!--            }-->
+
+<!--            showTyping() {-->
+<!--                this.typingIndicator.style.display = 'block';-->
+<!--                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;-->
+<!--            }-->
+
+<!--            hideTyping() {-->
+<!--                this.typingIndicator.style.display = 'none';-->
+<!--            }-->
+
+<!--            async loadChatHistory() {-->
+<!--                try {-->
+<!--                    const userId = "disp_1";-->
+<!--                    const response = await fetch(`/chat/history/${userId}`, {-->
+<!--                        method: 'POST'-->
+<!--                    });-->
+
+<!--                    if (!response.ok) throw new Error('채팅 기록을 불러오는데 실패했습니다.');-->
+
+<!--                    const history = await response.json();-->
+<!--                    // 기본 메시지 제거-->
+<!--                    this.chatMessages.innerHTML = '';-->
+<!--                    -->
+<!--                    if (history.length === 0) {-->
+<!--                        this.addMessage('안녕하세요! 무엇을 도와드릴까요?');-->
+<!--                    } else {-->
+<!--                        history.forEach(message => {-->
+<!--                            this.addMessage(message.content, message.type === 'USER');-->
+<!--                        });-->
+<!--                    }-->
+<!--                    this.historyLoaded = true;-->
+<!--                } catch (error) {-->
+<!--                    console.error('채팅 기록 로딩 오류:', error);-->
+<!--                }-->
+<!--            }-->
+
+<!--            async sendMessage() {-->
+<!--                const message = this.messageInput.value.trim();-->
+<!--                if (!message) return;-->
+
+<!--                this.addMessage(message, true);-->
+<!--                this.messageInput.value = '';-->
+<!--                this.sendButton.disabled = true;-->
+<!--                this.showTyping();-->
+
+<!--                try {-->
+<!--                    const response = await fetch('/chat/stream', {-->
+<!--                        method: 'POST',-->
+<!--                        headers: { 'Content-Type': 'application/json' },-->
+<!--                        body: JSON.stringify({ text: message })-->
+<!--                    });-->
+
+<!--                    if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');-->
+
+<!--                    const reader = response.body.getReader();-->
+<!--                    const decoder = new TextDecoder();-->
+<!--                    let botMessage = '';-->
+
+<!--                    this.hideTyping();-->
+<!--                    const botMessageDiv = document.createElement('div');-->
+<!--                    botMessageDiv.className = 'widget-message widget-bot-message';-->
+<!--                    this.chatMessages.appendChild(botMessageDiv);-->
+
+<!--                    while (true) {-->
+<!--                        const { done, value } = await reader.read();-->
+<!--                        if (done) break;-->
+
+<!--                        const chunk = decoder.decode(value);-->
+<!--                        botMessage += chunk;-->
+<!--                        botMessageDiv.innerHTML = this.formatMessage(botMessage);-->
+<!--                        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;-->
+<!--                    }-->
+<!--                } catch (error) {-->
+<!--                    this.hideTyping();-->
+<!--                    this.addMessage('죄송합니다. 오류가 발생했습니다: ' + error.message);-->
+<!--                } finally {-->
+<!--                    this.sendButton.disabled = false;-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+
+<!--        // 챗봇 위젯 초기화-->
+<!--        const chatbot = new ChatbotWidget();-->
+<!--    </script>-->
+<!--</body>-->
+<!--</html>-->

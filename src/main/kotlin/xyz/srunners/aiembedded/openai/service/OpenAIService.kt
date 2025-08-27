@@ -48,27 +48,87 @@ class OpenAIService(
 ) {
 
     // chatmodel: response
-    fun generate(text: String): CityResponseDTO? {
+    fun generate(text: String): String?{
 
-        val chatClient = ChatClient.create(openAiChatModel)
+        //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
+        val userId = "disp" + "_" + "1"
 
-        //메시지
-        val systemMessage = SystemMessage("")
-        val userMessage = UserMessage(text)
-        val assistantMessage = AssistantMessage("")
+        // 먼저 RAG 검색을 수행하여 메타데이터 정보 확보
+        val ragDocuments = vectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(text)
+                .similarityThreshold(0.3)
+                .topK(6)
+                .build()
+        )
 
-        val options = OpenAiChatOptions.builder()
-            .model("gpt-4o-mini")
-            .temperature(0.7)
+        // 메타데이터 정보를 포함한 사용자 메시지 생성
+        val sourcesInfo = ragDocuments.mapIndexed { index, doc ->
+            "참고문서${index + 1}: ${doc.metadata["title"]} (${doc.metadata["section"]})"
+        }.joinToString(", ")
+
+        val enhancedText = if (ragDocuments.isNotEmpty()) {
+            "$text\n\n[출처: $sourcesInfo]"
+        } else {
+            text
+        }
+
+
+        val chatUserEntity = ChatEntity(
+            userId = userId,
+            content = text,
+            type = MessageType.USER
+        )
+
+        //ChatMemory 로드 메시지
+        val chatMemory = MessageWindowChatMemory.builder()
+            .maxMessages(6)
+            .chatMemoryRepository(chatMemoryRepository)
             .build()
 
-        // 프롬프트
-        val prompt = Prompt(listOf(systemMessage, userMessage, assistantMessage), options)
+        // 로깅
+        val loggerAdvisor = SimpleLoggerAdvisor(
+            { request: ChatClientRequest? -> "Custom request: " + request!!.prompt().getUserMessage() },
+            { response: ChatResponse? -> "Custom response: " + response!!.getResult() },
+            0
+        )
 
-        // 요청 및 응답
-        return chatClient.prompt(prompt)
+        // 챗메모리
+        val chatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
+            .conversationId(userId)
+            .build()
+        // RAG
+        // text -> 임베딩
+        // 임베딩 -> DB 에서 조회 n 추출
+        // 문서를 프롬프트에 붙여서
+
+        val ragAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
+            .searchRequest(SearchRequest.builder().similarityThreshold(0.3).topK(6).build())
+            .promptTemplate(AIPromptTemplate.QUESTION_ANSWER.createPromptTemplate())
+            .build()
+
+        val chatClient = ChatClient.builder(openAiChatModel)
+            .defaultAdvisors(chatMemoryAdvisor, ragAdvisor, loggerAdvisor)
+            .build()
+
+        chatMemoryRepository.saveAll(userId, chatMemory.get(userId))
+
+        val chatResponse = chatClient.prompt()
+            .tools(ChatTools())
+            .user(enhancedText)
             .call()
-            .entity(CityResponseDTO::class.java)
+            .chatResponse()
+
+        val content = chatResponse?.result?.output?.let { it.text!! }
+        // 전체 대화 저장용
+        val chatAssistantEntity = ChatEntity(
+            userId = userId,
+            content = content,
+            type = MessageType.ASSISTANT
+        )
+        chatRepository.saveAll(listOf(chatUserEntity, chatAssistantEntity))
+
+        return content
     }
 
     // chatmodel: response stream 멀티턴&히스토리
@@ -76,6 +136,26 @@ class OpenAIService(
 
         //유저&페이지별 ChatMemory를 관리하기 위한 key (POC 명시적으로)
         val userId = "disp" + "_" + "1"
+
+        // 먼저 RAG 검색을 수행하여 메타데이터 정보 확보
+        val ragDocuments = vectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(text)
+                .similarityThreshold(0.3)
+                .topK(6)
+                .build()
+        )
+
+        // 메타데이터 정보를 포함한 사용자 메시지 생성
+        val sourcesInfo = ragDocuments.mapIndexed { index, doc ->
+            "참고문서${index + 1}: ${doc.metadata["docId"]} (${doc.metadata["page_number"]})"
+        }.joinToString(", ")
+
+        val enhancedText = if (ragDocuments.isNotEmpty()) {
+            "$text\n\n[출처: $sourcesInfo]"
+        } else {
+            text
+        }
 
         val chatUserEntity = ChatEntity(
             userId = userId,
@@ -122,7 +202,7 @@ class OpenAIService(
 
         return chatClient.prompt()
             .tools(ChatTools())
-            .user(text)
+            .user(enhancedText)
             .stream()
             .content()
             .mapNotNull {

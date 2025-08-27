@@ -415,5 +415,20 @@
             }
         }
     </script>
+
+    <!-- 챗봇 임베드 스크립트 (페이지에 위젯이 이미 있으므로 새로 생성하지 않음) -->
+    <script>
+        // 챗봇 임베드 스크립트 로드하되 새 위젯 생성 방지
+        (function() {
+            const script = document.createElement('script');
+            script.src = '/js/chatbot-embed.js';
+            script.onload = function() {
+                // 페이지에 이미 위젯이 있다는 것을 확인했으므로 추가 작업 없음
+                console.log('Chatbot embed script loaded');
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+
 </body>
 </html>
